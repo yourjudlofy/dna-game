@@ -1,0 +1,87 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>DNA | Defesa do Óvulo</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:#080808;color:#fff;font-family:Arial,sans-serif;text-align:center}
+header{padding:12px;background:#151515;border-bottom:1px solid #555}
+h1{font-size:clamp(20px,4vw,30px);letter-spacing:2px;margin:6px}
+p{line-height:1.5;color:#ccc}
+.stats{display:flex;justify-content:center;gap:8px;flex-wrap:wrap;padding:10px}
+.stat{padding:9px 15px;background:#191919;border:1px solid #555;border-radius:8px}
+.stat b{display:block;font-size:23px}.stat span{font-size:10px;color:#ccc}
+#arena{position:relative;width:96%;max-width:1000px;height:58vh;min-height:300px;margin:auto;border:1px solid #777;border-radius:12px;overflow:hidden;touch-action:manipulation}
+canvas{width:100%;height:100%;display:block;touch-action:manipulation}
+.overlay{position:absolute;inset:0;background:#090909f5;display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.panel{max-width:520px}.dna{font-size:45px}
+.info{border:1px solid #555;border-radius:9px;padding:10px;text-align:left;font-size:13px;line-height:1.5}
+.names{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
+.names span{border:1px solid #777;border-radius:7px;padding:7px}
+button{background:#eee;color:#111;border:0;border-radius:9px;padding:14px;font-size:16px;font-weight:bold;cursor:pointer;touch-action:manipulation}
+.start{width:100%;margin-top:12px}
+.controls{padding:10px}.controls button{width:96%;max-width:500px;min-height:55px}
+.hidden{display:none!important}
+.hint{position:absolute;top:8px;left:0;right:0;font-size:10px;color:#ddd;pointer-events:none}
+</style>
+</head>
+<body>
+<header>
+<h1>DNA — DEFESA DO ÓVULO</h1>
+<p>JOGO EDUCATIVO DE CIÊNCIAS</p>
+</header>
+<div class="stats">
+<div class="stat"><b id="score">0</b><span>ELIMINADOS</span></div>
+<div class="stat"><b id="lives">3</b><span>CHANCES</span></div>
+<div class="stat"><b id="time">0</b><span>SEGUNDOS</span></div>
+</div>
+<div id="arena">
+<canvas id="game"></canvas>
+<div class="hint">TOQUE NOS ESPERMATOZOIDES ANTES QUE CHEGUEM AO ÓVULO</div>
+<div class="overlay" id="intro"><div class="panel">
+<div class="dna">🧬</div>
+<h2>DEFESA DA VIDA</h2>
+<p>Proteja o óvulo! Toque nos espermatozoides para eliminá-los antes que alcancem o destino. Eles ficam cada vez mais rápidos. Você tem três chances.</p>
+<div class="names"><span>Davi</span><span>Lucas P</span><span>Lucas Osório</span><span>Taylor</span></div>
+<p>Tema: Ciências · Professor Miguel</p>
+<div class="info"><b>O que é DNA?</b><br>O DNA (ácido desoxirribonucleico) contém instruções genéticas dos seres vivos. Na reprodução humana, o espermatozoide e o óvulo normalmente contribuem com 23 cromossomos cada. Após a fecundação, o zigoto geralmente possui 46 cromossomos. O desenvolvimento é um processo biológico gradual; este jogo é uma representação simplificada.</div>
+<button class="start" id="start">COMEÇAR JOGO</button>
+</div></div>
+<div class="overlay hidden" id="end"><div class="panel">
+<div class="dna">🧬</div><h2>UMA NOVA VIDA FOI GERADA!</h2>
+<p id="result"></p><button class="start" id="again">JOGAR NOVAMENTE</button>
+</div></div>
+</div>
+<div class="controls"><button id="attack">TOQUE PARA ATACAR</button></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),c=$('game'),x=c.getContext('2d');
+let w=500,h=350,playing=false,score=0,lives=3,time=0,spawn=0,last=0,enemies=[],particles=[],raf;
+const rand=(a,b)=>a+Math.random()*(b-a);
+function resize(){let r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);w=r.width;h=r.height;c.width=w*d;c.height=h*d;x.setTransform(d,0,0,d,0,0);draw()}
+function update(){$('score').textContent=score;$('lives').textContent=lives;$('time').textContent=Math.floor(time)}
+function create(){enemies.push({x:rand(15,w-15),y:h+20,r:rand(10,15),speed:rand(150,190)+time*2,phase:rand(0,6),wave:rand(8,25)})}
+function burst(a,b){for(let i=0;i<8;i++){let q=rand(0,6.28),v=rand(30,110);particles.push({x:a,y:b,vx:Math.cos(q)*v,vy:Math.sin(q)*v,t:.4})}}
+function remove(e){let i=enemies.indexOf(e);if(i<0)return;enemies.splice(i,1);score++;burst(e.x,e.y);update()}
+function tap(ev){if(!playing)return;let r=c.getBoundingClientRect(),a=ev.clientX-r.left,b=ev.clientY-r.top;let e=enemies.filter(z=>Math.hypot(z.x-a,z.y-b)<Math.max(38,z.r+20)).sort((u,v)=>Math.hypot(u.x-a,u.y-b)-Math.hypot(v.x-a,v.y-b))[0];if(e)remove(e)}
+function attack(){if(playing&&enemies.length)remove(enemies.slice().sort((a,b)=>a.y-b.y)[0])}
+function draw(){
+x.clearRect(0,0,w,h);let g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,'#222');g.addColorStop(1,'#050505');x.fillStyle=g;x.fillRect(0,0,w,h);
+for(let i=0;i<50;i++){x.fillStyle='#777';x.fillRect((i*79)%w,(i*47)%h,1,1)}
+let ox=w/2,oy=h*.18,or=Math.min(34,w*.08);x.fillStyle='#aaa';x.beginPath();x.arc(ox,oy,or,0,7);x.fill();x.strokeStyle='white';x.lineWidth=2;x.stroke();x.fillStyle='#ddd';x.font='10px Arial';x.textAlign='center';x.fillText('ÓVULO',ox,oy+or+16);
+for(let e of enemies){x.save();x.translate(e.x,e.y);x.rotate(Math.sin(e.phase)*.4);x.fillStyle='#fff';x.beginPath();x.arc(0,0,e.r,0,7);x.fill();x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.moveTo(0,e.r);x.quadraticCurveTo(e.wave,e.r+10,Math.sin(e.phase)*e.wave,e.r+24);x.stroke();x.restore()}
+for(let p of particles){x.globalAlpha=Math.max(0,p.t/.4);x.fillStyle='#fff';x.beginPath();x.arc(p.x,p.y,2,0,7);x.fill()}x.globalAlpha=1
+}
+function end(){playing=false;cancelAnimationFrame(raf);$('result').textContent='Um espermatozoide alcançou o óvulo nesta simulação. Você eliminou '+score+' alvos em '+Math.floor(time)+' segundos. Na realidade, a fecundação e o desenvolvimento embrionário são processos complexos.';$('end').classList.remove('hidden')}
+function tick(now){if(!playing)return;let dt=Math.min((now-last)/1000,.04);last=now;time+=dt;spawn+=dt;if(spawn>.34){spawn=0;create();if(time>8&&Math.random()<.7)create()}
+for(let e of [...enemies]){e.y-=e.speed*dt;e.x+=Math.sin(time*3+e.phase)*e.wave*dt;e.phase+=dt*2;if(e.y<h*.18+40){enemies.splice(enemies.indexOf(e),1);lives--;if(lives<=0){update();end();return}}}
+for(let p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.t-=dt}particles=particles.filter(p=>p.t>0);update();draw();raf=requestAnimationFrame(tick)}
+function start(){cancelAnimationFrame(raf);score=0;lives=3;time=0;spawn=0;enemies=[];particles=[];playing=true;$('intro').classList.add('hidden');$('end').classList.add('hidden');update();last=performance.now();raf=requestAnimationFrame(tick)}
+c.addEventListener('pointerdown',e=>{e.preventDefault();tap(e)});$('attack').addEventListener('click',attack);$('start').addEventListener('click',start);$('again').addEventListener('click',start);if('ResizeObserver'in window)new ResizeObserver(resize).observe($('arena'));else window.addEventListener('resize',resize);resize();update();
+})();
+</script>
+</body>
+</html>
